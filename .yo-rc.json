@@ -1,0 +1,19 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "useGulp": false,
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "22.23.2",
+    "sdksVersions": {},
+    "version": "1.23.2",
+    "libraryName": "presentation-hub-viewer",
+    "libraryId": "9587afd0-4538-4156-a614-5ce8bdf8aaf7",
+    "environment": "spo",
+    "packageManager": "npm",
+    "solutionName": "presentation-hub-viewer",
+    "solutionShortDescription": "presentation-hub-viewer description",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "componentType": "webpart"
+  }
+}

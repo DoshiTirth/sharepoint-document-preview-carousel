@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "presentation-hub-viewer-client-side-solution",
+    "id": "9587afd0-4538-4156-a614-5ce8bdf8aaf7",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.23.2"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "presentation-hub-viewer description"
+      },
+      "longDescription": {
+        "default": "presentation-hub-viewer description"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "presentation-hub-viewer Feature",
+        "description": "The feature that activates elements of the presentation-hub-viewer solution.",
+        "id": "4352af5b-536a-4671-a9dc-53ef447f02d5",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/presentation-hub-viewer.sppkg"
+  }
+}

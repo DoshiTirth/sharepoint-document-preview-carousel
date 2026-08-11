@@ -1,0 +1,19 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "document-preview-carousel-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/documentPreviewCarousel/DocumentPreviewCarouselWebPart.js",
+          "manifest": "./src/webparts/documentPreviewCarousel/DocumentPreviewCarouselWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "DocumentPreviewCarouselWebPartStrings": "lib/webparts/documentPreviewCarousel/loc/{locale}.js",
+    "PropertyControlStrings": "node_modules/@pnp/spfx-property-controls/lib/loc/{locale}.js"
+  }
+}
