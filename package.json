@@ -1,6 +1,7 @@
 {
-  "name": "presentation-hub-viewer",
-  "version": "0.0.1",
+  "name": "sharepoint-document-preview-carousel",
+  "version": "1.0.0",
+  "description": "A SharePoint Framework (SPFx) web part for browsing document libraries with live inline previews, folder navigation, Power BI embedding, and file-type filtering.",
   "private": true,
   "engines": {
     "node": ">=22.14.0 < 23.0.0"
@@ -19,7 +20,6 @@
     "@microsoft/sp-office-ui-fabric-core": "1.23.2",
     "@microsoft/sp-property-pane": "1.23.2",
     "@microsoft/sp-webpart-base": "1.23.2",
-    "@pnp/spfx-property-controls": "^3.13.0",
     "react": "17.0.1",
     "react-dom": "17.0.1",
     "tslib": "2.3.1"

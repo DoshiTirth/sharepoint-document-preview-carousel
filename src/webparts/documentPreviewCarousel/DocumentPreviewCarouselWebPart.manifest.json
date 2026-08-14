@@ -20,7 +20,7 @@
     "group": { "default": "Advanced" },
     "title": { "default": "DocumentPreviewCarousel" },
     "description": { "default": "DocumentPreviewCarousel description" },
-    "officeFabricIconFontName": "Page",
+    "iconImageUrl": "assets/carousel-icon.png",
     "properties": {
       "description": "DocumentPreviewCarousel"
     }

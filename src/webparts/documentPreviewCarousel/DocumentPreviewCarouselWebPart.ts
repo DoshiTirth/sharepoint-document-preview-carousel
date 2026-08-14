@@ -89,7 +89,7 @@ export default class DocumentPreviewCarouselWebPart extends BaseClientSideWebPar
               groupFields: [
                 PropertyPaneTextField('folderServerRelativeUrl', {
                   label: 'Folder server-relative URL',
-                  description: "e.g. /sites/PresentationHub/Internal Documents/Information & Technology"
+                  description: "e.g. /sites/YourSiteName/Shared Documents/Your Folder"
                 }),
                 PropertyPaneTextField('powerBiReportsRaw', {
                   label: 'Power BI reports (one per line: Name | Embed URL)',
