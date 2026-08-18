@@ -1,7 +1,7 @@
 {
   "name": "sharepoint-document-preview-carousel",
-  "version": "1.0.0",
-  "description": "A SharePoint Framework (SPFx) web part for browsing document libraries with live inline previews, folder navigation, Power BI embedding, and file-type filtering.",
+  "version": "2.0.0",
+  "description": "A SharePoint Framework (SPFx) web part for browsing document libraries with live inline previews, folder navigation, Power BI embedding, file-type filtering, and in-browser AI document summarization.",
   "private": true,
   "engines": {
     "node": ">=22.14.0 < 23.0.0"
