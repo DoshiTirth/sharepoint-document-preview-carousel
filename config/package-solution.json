@@ -3,7 +3,7 @@
   "solution": {
     "name": "presentation-hub-viewer-client-side-solution",
     "id": "9587afd0-4538-4156-a614-5ce8bdf8aaf7",
-    "version": "1.0.0.0",
+    "version": "2.0.0.0",
     "includeClientSideAssets": true,
     "skipFeatureDeployment": true,
     "isDomainIsolated": false,
@@ -30,7 +30,7 @@
         "title": "presentation-hub-viewer Feature",
         "description": "The feature that activates elements of the presentation-hub-viewer solution.",
         "id": "4352af5b-536a-4671-a9dc-53ef447f02d5",
-        "version": "1.0.0.0"
+        "version": "2.0.0.0"
       }
     ]
   },
