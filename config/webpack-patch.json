@@ -1,0 +1,4 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/webpack-patch-plugin.schema.json",
+  "patchFiles": ["config/webpack-patch-txt-asset.js"]
+}
