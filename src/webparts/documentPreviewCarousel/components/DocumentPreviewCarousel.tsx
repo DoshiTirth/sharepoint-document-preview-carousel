@@ -420,8 +420,22 @@ export default class DocumentPreviewCarousel extends React.Component<IDocumentPr
     return fetchPage(firstPageUrl);
   }
 
+  // Guards against two issues with this component's async folder loading
+  // (same class of problem, same fix pattern used in SummaryPanel):
+  // 1. Unmount safety - setState() after the component is gone.
+  // 2. Staleness - navigating into a folder, then quickly into another
+  //    before the first request resolves, could otherwise let the first
+  //    (now-stale) folder's results overwrite the second (correct) one.
+  private latestFolderRequestToken = 0;
+
+  public componentWillUnmount(): void {
+    this.latestFolderRequestToken += 1;
+  }
+
   private loadFolder = (folderServerRelativeUrl: string): void => {
     const { siteAbsoluteUrl } = this.props;
+    const requestToken = ++this.latestFolderRequestToken;
+    const isStillCurrent = (): boolean => requestToken === this.latestFolderRequestToken;
 
     if (!folderServerRelativeUrl || typeof folderServerRelativeUrl !== 'string') {
       this.setState({ isLoading: false, errorMessage: 'No folder path configured yet. Edit this web part to set one.' });
@@ -447,6 +461,7 @@ export default class DocumentPreviewCarousel extends React.Component<IDocumentPr
       this.fetchAllPages(foldersRequestUrl)
     ])
       .then(([allFiles, allFolders]: any[][]) => {
+        if (!isStillCurrent()) return;
 
         const folderItems: ICarouselItem[] = allFolders
           .filter((folder: any) => folder.Name.indexOf('Forms') !== 0)
@@ -490,6 +505,7 @@ export default class DocumentPreviewCarousel extends React.Component<IDocumentPr
         });
       })
       .catch((error: any) => {
+        if (!isStillCurrent()) return;
         if (error.statusCode === 403 || error.statusCode === 401) {
           this.setState({
             isLoading: false,

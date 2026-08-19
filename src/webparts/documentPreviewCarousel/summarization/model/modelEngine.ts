@@ -96,3 +96,12 @@ export function resetEngineStateForTests(): void {
   if (idleTimer) clearTimeout(idleTimer);
   idleTimer = undefined;
 }
+
+// Cheap, synchronous, side-effect-free check - does NOT import the real
+// WebLLM library. Callers (like the web part's onDispose) use this to
+// decide whether it's even worth attempting an unload, so that disposing a
+// web part that never had the summarizer used on it doesn't trigger
+// downloading the ~6.6MB WebLLM chunk just to find there's nothing to unload.
+export function hasLoadedOrLoadingEngine(): boolean {
+  return engineInstance !== undefined || loadInFlight !== undefined;
+}

@@ -94,6 +94,24 @@ const styles: { [key: string]: React.CSSProperties } = {
 };
 
 export class SummaryPanel extends React.Component<ISummaryPanelProps, IPanelState> {
+  // Guards against two real issues with async work inside a React class
+  // component:
+  // 1. Unmount safety: if the panel is closed (unmounted) while a
+  //    summarization is still in flight, the promise chain would otherwise
+  //    call setState() on an unmounted component - React warns about this,
+  //    and until the promise settles, the component instance and everything
+  //    its closures reference stay reachable (can't be garbage collected).
+  // 2. Staleness: if the selected file changes while the panel is still
+  //    open (target changes twice before the first summarization finishes),
+  //    without this guard the OLDER request could resolve after the newer
+  //    one and overwrite fresh state with stale results - and both
+  //    inference runs would keep consuming CPU/GPU concurrently for no
+  //    reason, since only the latest result is ever wanted.
+  // A monotonically increasing token solves both: each run captures its own
+  // token, and only applies its result if that token is still the current
+  // one by the time it resolves.
+  private latestRequestToken = 0;
+
   public constructor(props: ISummaryPanelProps) {
     super(props);
     this.state = { status: 'loading' };
@@ -101,6 +119,12 @@ export class SummaryPanel extends React.Component<ISummaryPanelProps, IPanelStat
 
   public componentDidMount(): void {
     this.runSummarization();
+  }
+
+  public componentWillUnmount(): void {
+    // Invalidates any in-flight request's token so its eventual
+    // then()/catch() becomes a no-op instead of calling setState().
+    this.latestRequestToken += 1;
   }
 
   public componentDidUpdate(previousProps: ISummaryPanelProps): void {
@@ -118,6 +142,8 @@ export class SummaryPanel extends React.Component<ISummaryPanelProps, IPanelStat
 
   private runSummarization(): void {
     const { target, pdfWorkerSrc } = this.props;
+    const requestToken = ++this.latestRequestToken;
+    const isStillCurrent = (): boolean => requestToken === this.latestRequestToken;
 
     if (!target) {
       this.setState({
@@ -135,12 +161,15 @@ export class SummaryPanel extends React.Component<ISummaryPanelProps, IPanelStat
       fileVersion: target.fileVersion,
       fetchFileBytes: target.fetchFileBytes,
       pdfWorkerSrc,
-      onProgress: (progress) => this.setState({ progress }),
+      onProgress: (progress) => {
+        if (isStillCurrent()) this.setState({ progress });
+      },
     })
       .then((result) => {
-        this.setState({ status: 'ready', summary: result.summary });
+        if (isStillCurrent()) this.setState({ status: 'ready', summary: result.summary });
       })
       .catch((error: unknown) => {
+        if (!isStillCurrent()) return;
         const message =
           error instanceof SummarizationUnavailableError
             ? error.message

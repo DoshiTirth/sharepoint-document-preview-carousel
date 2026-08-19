@@ -10,6 +10,15 @@ import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 
 import DocumentPreviewCarousel from './components/DocumentPreviewCarousel';
 import { IDocumentPreviewCarouselProps, IPowerBiReportConfig } from './components/IDocumentPreviewCarouselProps';
+// Safe to import statically: this module only holds a type-only reference
+// to the real WebLLM library (erased at compile time) - it does NOT pull
+// the actual multi-MB model library into this web part's main bundle.
+// See modelEngine.ts's own comments for why.
+import { hasLoadedOrLoadingEngine, unloadEngine } from './summarization/model/modelEngine';
+// Also safe to import statically - see modelEngine.ts's comment above;
+// this module's only static import is a resolved asset URL string, not
+// pdf.js itself.
+import { revokePdfWorkerBlobUrl } from './summarization/parsers/pdfWorkerLoader';
 
 export interface IDocumentPreviewCarouselWebPartProps {
   folderServerRelativeUrl: string;
@@ -72,6 +81,16 @@ export default class DocumentPreviewCarouselWebPart extends BaseClientSideWebPar
 
   protected onDispose(): void {
     ReactDom.unmountComponentAtNode(this.domElement);
+
+    // Free the summarization model's RAM/VRAM immediately when this web
+    // part is removed from the page, rather than waiting up to 5 minutes
+    // for its own idle timer. The cheap synchronous check means this is a
+    // no-op (no network request, no work) for the common case of a web
+    // part instance where "Summarize AI" was never used.
+    if (hasLoadedOrLoadingEngine()) {
+      unloadEngine().catch(() => undefined);
+    }
+    revokePdfWorkerBlobUrl();
   }
 
   protected get dataVersion(): Version {

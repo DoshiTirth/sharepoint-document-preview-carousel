@@ -53,3 +53,18 @@ export async function getPdfWorkerBlobUrl(): Promise<string> {
 
   return inFlightRequest;
 }
+
+/**
+ * Releases the cached Blob URL's underlying memory (a fixed ~1.4MB - the
+ * worker script's text). Safe to call even if the URL was never created
+ * (checks internally, does nothing in that case). Intended to be called
+ * from the web part's onDispose(), same as the model engine's unload -
+ * without this, the Blob's content would stay retained in memory for the
+ * lifetime of the page even after this web part instance is gone.
+ */
+export function revokePdfWorkerBlobUrl(): void {
+  if (cachedBlobUrl) {
+    URL.revokeObjectURL(cachedBlobUrl);
+    cachedBlobUrl = undefined;
+  }
+}
