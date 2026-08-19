@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json.schemastore.org/jest.json",
+  "extends": "@microsoft/spfx-web-build-rig/profiles/default/config/jest.config.json",
+
+  "setupFiles": ["<rootDir>/config/jest-setup.js"]
+}
