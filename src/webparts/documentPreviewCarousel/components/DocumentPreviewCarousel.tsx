@@ -1,6 +1,18 @@
 import * as React from 'react';
 import { IDocumentPreviewCarouselProps } from './IDocumentPreviewCarouselProps';
 import { SPHttpClient } from '@microsoft/sp-http';
+import { ISummaryTarget } from '../summarization/ui/SummaryPanel';
+
+// Lazy-loaded: the summarization feature (and everything it pulls in -
+// mammoth, JSZip, read-excel-file, and eventually pdf.js/WebLLM further
+// down its own lazy chain) should not cost anything on initial page load
+// for people who never click "Summarize AI". Only SummaryPanel's *type*
+// (imported above, erased at compile time) is needed eagerly for props typing.
+const SummaryPanel = React.lazy(() =>
+  import(/* webpackChunkName: 'summary-panel' */ '../summarization/ui/SummaryPanel').then((mod) => ({
+    default: mod.SummaryPanel,
+  }))
+);
 /* ============================================================
    WHAT THIS COMPONENT DOES (read this first)
    ============================================================
@@ -46,6 +58,7 @@ interface IState {
   errorMessage: string;
   activeCategoryFilters: { [key in ItemCategory]: boolean };
   searchText: string;
+  isSummaryPanelOpen: boolean; // NEW
 }
 
 type ItemCategory = 'ppt' | 'doc' | 'xls' | 'pdf' | 'bi' | 'other';
@@ -59,6 +72,8 @@ interface ICarouselItem {
   iconLabel: string;
   isPreviewableFile: boolean;
   category: ItemCategory; // NEW - used for filtering
+  uniqueId?: string; // NEW - stable file identity, used as a cache key for summaries
+  etag?: string; // NEW - changes whenever the file's content changes
 }
 
 const PREVIEWABLE_EXTENSIONS = ['pptx', 'ppt', 'docx', 'doc', 'xlsx', 'xls', 'pdf'];
@@ -240,6 +255,28 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: 4,
     cursor: 'pointer'
   },
+  summarizeButton: {
+    padding: '8px 16px',
+    fontSize: 13,
+    background: '#0078d4',
+    color: '#ffffff',
+    border: '1px solid #0078d4',
+    borderRadius: 4,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6
+  },
+  summaryPanelLoading: {
+    fontSize: 13,
+    color: '#605e5c',
+    padding: '14px 16px',
+    marginTop: 12,
+    marginBottom: 12,
+    background: '#ffffff',
+    border: '1px solid #d1d1d1',
+    borderRadius: 8
+  },
   carouselStrip: {
     display: 'flex',
     gap: 12,
@@ -305,6 +342,7 @@ export default class DocumentPreviewCarousel extends React.Component<IDocumentPr
       isLoading: true,
       errorMessage: '',
       searchText: '',
+      isSummaryPanelOpen: false,
       activeCategoryFilters: {
         ppt: props.defaultTypeFilters.showPpt,
         doc: props.defaultTypeFilters.showDoc,
@@ -401,7 +439,7 @@ export default class DocumentPreviewCarousel extends React.Component<IDocumentPr
     const encodedPath = encodeURI(safePath);
     const origin = siteAbsoluteUrl.split('/').slice(0, 3).join('/');
 
-    const filesRequestUrl = `${siteAbsoluteUrl}/_api/web/GetFolderByServerRelativeUrl('${encodedPath}')/Files?$select=Name,ServerRelativeUrl&$top=500`;
+    const filesRequestUrl = `${siteAbsoluteUrl}/_api/web/GetFolderByServerRelativeUrl('${encodedPath}')/Files?$select=Name,ServerRelativeUrl,UniqueId,ETag&$top=500`;
     const foldersRequestUrl = `${siteAbsoluteUrl}/_api/web/GetFolderByServerRelativeUrl('${encodedPath}')/Folders?$select=Name,ServerRelativeUrl&$top=500`;
 
     Promise.all([
@@ -426,7 +464,9 @@ export default class DocumentPreviewCarousel extends React.Component<IDocumentPr
           fileUrl: origin + file.ServerRelativeUrl,
           iconLabel: getFileTypeLabel(file.Name),
           isPreviewableFile: canBePreviewedInline(file.Name),
-          category: getCategory(file.Name)
+          category: getCategory(file.Name),
+          uniqueId: file.UniqueId,
+          etag: file.ETag
         }));
 
         const powerBiItems: ICarouselItem[] = (this.props.powerBiReports || []).map((report) => ({
@@ -502,6 +542,54 @@ export default class DocumentPreviewCarousel extends React.Component<IDocumentPr
     if (this.state.activeItem && this.state.activeItem.fileUrl) {
       window.open(this.state.activeItem.fileUrl, '_blank');
     }
+  }
+
+  private toggleSummaryPanel = (): void => {
+    this.setState((previousState) => ({ isSummaryPanelOpen: !previousState.isSummaryPanelOpen }));
+  }
+
+  private closeSummaryPanel = (): void => {
+    this.setState({ isSummaryPanelOpen: false });
+  }
+
+  // Downloads the active file's raw bytes for parsing. Uses spHttpClient
+  // (rather than a bare fetch()) so the request correctly carries the
+  // SharePoint session context this web part already runs under - the same
+  // client the rest of this component uses for REST calls.
+  private fetchActiveFileBytes = (): Promise<ArrayBuffer> => {
+    const { activeItem } = this.state;
+    if (!activeItem || !activeItem.fileUrl) {
+      return Promise.reject(new Error('No file selected.'));
+    }
+    return this.props.spHttpClient
+      .get(activeItem.fileUrl, SPHttpClient.configurations.v1)
+      .then((response: any) => {
+        if (!response.ok) {
+          throw new Error('Could not download this file (status ' + response.status + ').');
+        }
+        return response.arrayBuffer();
+      });
+  }
+
+  // Builds what the SummaryPanel needs to know about the currently active
+  // item, or undefined if nothing summarizable is selected right now - the
+  // panel itself turns "undefined" into a clear fallback message rather
+  // than crashing, per the agreed design (Power BI / no selection cases).
+  private getSummaryTarget(): ISummaryTarget | undefined {
+    const { activeItem } = this.state;
+    if (!activeItem || activeItem.isFolder || activeItem.isPowerBiReport || !activeItem.fileUrl) {
+      return undefined;
+    }
+
+    return {
+      fileName: activeItem.name,
+      // Falls back to the file URL if UniqueId/ETag are ever missing
+      // (e.g. an older cached items list) rather than crashing - worst
+      // case, the cache key is slightly less precise, not broken.
+      fileId: activeItem.uniqueId || activeItem.fileUrl,
+      fileVersion: activeItem.etag || 'unknown',
+      fetchFileBytes: this.fetchActiveFileBytes
+    };
   }
 
   private handleRefreshClick = (): void => {
@@ -609,6 +697,9 @@ export default class DocumentPreviewCarousel extends React.Component<IDocumentPr
           onChange={this.handleSearchChange}
           style={styles.searchInput}
         />
+        <button onClick={this.toggleSummaryPanel} style={styles.summarizeButton}>
+          Summarize AI
+        </button>
         <button onClick={this.handleRefreshClick} style={styles.refreshButton}>
           Refresh
         </button>
@@ -702,6 +793,12 @@ export default class DocumentPreviewCarousel extends React.Component<IDocumentPr
             </div>
           )}
         </div>
+
+        {this.state.isSummaryPanelOpen && (
+          <React.Suspense fallback={<div style={styles.summaryPanelLoading}>{'Loading summarizer\u2026'}</div>}>
+            <SummaryPanel target={this.getSummaryTarget()} onClose={this.closeSummaryPanel} />
+          </React.Suspense>
+        )}
 
         {this.renderToolbar()}
         {this.renderFilterChips()}
